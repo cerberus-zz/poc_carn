@@ -34,10 +34,10 @@ class HomeController(Controller):
             votacao = None
         else:
             votacao = votacao_db[0]
-            quesito_db = db.GqlQuery("SELECT * FROM NotaQuesito WHERE parent = :1", votacao).fetch(3)
+            quesito_db = db.GqlQuery("SELECT * FROM NotaQuesito WHERE ancestor IS :1", votacao.key()).fetch(3)
 
             for quesito in quesito_db:
-                quesitos[quesito_db.quesito] = quesito_db
+                quesitos[quesito.quesito] = quesito
 
         db.run_in_transaction(self.save_vote, votacao=votacao, quesitos=quesitos, nota_evolucao=nota_evolucao, nota_harmonia=nota_harmonia, nota_ms_pb=nota_ms_pb)
 
@@ -57,7 +57,7 @@ class HomeController(Controller):
                 quesito = NotaQuesito(parent=votacao, quesito=nome_quesito, nota_total=0)
             else:
                 quesito = quesitos[nome_quesito]
-                
+
             quesito.nota_total += int(kw[nome_quesito])
             quesito.put()
 
@@ -67,19 +67,29 @@ class HomeController(Controller):
         quesitos = {}
         numero_votos = 0
         votacao_db =  db.GqlQuery("SELECT * FROM Votacao WHERE escola = :1", escola).fetch(1)
+
         if votacao_db:
             votacao = votacao_db[0]
             numero_votos = votacao.numero_votos
-            quesitos_db = db.GqlQuery("SELECT * FROM NotaQuesito WHERE parent = :1", votacao).fetch(3)
+            quesitos_db = db.GqlQuery("SELECT * FROM NotaQuesito WHERE ancestor IS :1", votacao.key()).fetch(3)
 
             for quesito_db in quesitos_db:
                 quesitos[quesito_db.quesito] = quesito_db.nota_total
 
+        nota_evolucao = 0
+        nota_harmonia = 0
+        nota_ms_pb = 0
+
+        if numero_votos:
+            nota_evolucao = float(quesitos.get('nota_evolucao', 0)) / float(numero_votos)
+            nota_harmonia = float(quesitos.get('nota_harmonia', 0)) / float(numero_votos)
+            nota_ms_pb = float(quesitos.get('nota_ms_pb', 0)) / float(numero_votos)
+
         self.render_to_response("result.html", context,
                 votos=numero_votos,
-                nota_evolucao=quesitos.get('nota_evolucao', 0),
-                nota_harmonia=quesitos.get('nota_harmonia', 0), 
-                nota_ms_pb=quesitos.get('nota_ms_pb', 0))
+                nota_evolucao=nota_evolucao,
+                nota_harmonia=nota_harmonia, 
+                nota_ms_pb=nota_ms_pb)
 
 #    @get("/zerar")
 #    def zerar(self, context):

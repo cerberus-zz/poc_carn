@@ -20,8 +20,7 @@ jQuery.attachVoting = function() {
                 cache: false
             }
         ).responseText;
-        $('#voting-result').html(bodyContent);
-
+        //$.updateResults($('#voting-result'));
     });
 };
 jQuery.updateResults = function(el) {
@@ -31,7 +30,12 @@ jQuery.updateResults = function(el) {
         async: false,
         cache:false,
         success: function(data){
-            el.html("votos "+data.votos);
+            template = "votos: @@votos@@<br />harmonia: @@harmonia@@<br />evolucao: @@evolucao@@<br />mestre sala: @@ms_pb@@"
+            el.html(template.replace('@@votos@@', data.votos)
+                            .replace('@@harmonia@@', data.nota_harmonia)
+                            .replace('@@evolucao@@', data.nota_evolucao)
+                            .replace('@@ms_pb@@', data.nota_ms_pb)
+                            );
         }
     }).responseText;
 };
