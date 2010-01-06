@@ -2,15 +2,16 @@
 #-*- coding:utf-8 -*-
 
 from base import Controller, get, post, json, authenticated
-from models.json import JsonNode
-from models import IdeaNode
+
+class Escola(object):
+    def __init__(self, name):
+        self.name = name
 
 class HomeController(Controller):
-
-#    @get("/")
-#    def index(self, context):
-#        ideas = IdeaNode.all().filter('owner =', self.get_authenticated_user()).order('-create_date')
-#        self.render_to_response("index.html", context, ideas=ideas)
+    @get("/")
+    def index(self, context):
+        escola = Escola("Mocidade Independente de Padre Miguel")
+        self.render_to_response("index.html", context, escola=escola)
 
 #    @get("/linked")
 #    def linked_content(self, context):
