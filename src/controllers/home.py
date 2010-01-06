@@ -9,6 +9,7 @@ from base import Controller, get, post, json, authenticated
 from models import *
 
 escola = "Mocidade"
+retries = 20
 
 class HomeController(Controller):
     def __init__(self, settings=None):
@@ -30,7 +31,7 @@ class HomeController(Controller):
     @post("/resolvevote")
     def resolve_vote(self, context, nota_evolucao, nota_harmonia, nota_ms_pb):
         votacao_db = db.GqlQuery("SELECT * FROM Votacao WHERE escola = :1", escola).fetch(1)
-        db.run_in_transaction(self.save_vote, votacao=votacao_db, nota_evolucao=nota_evolucao, nota_harmonia=nota_harmonia, nota_ms_pb=nota_ms_pb)
+        db.run_in_transaction_custom_retries(retries, self.save_vote, votacao=votacao_db, nota_evolucao=nota_evolucao, nota_harmonia=nota_harmonia, nota_ms_pb=nota_ms_pb)
 
     def save_vote(self, **kw):
         votacao_db = kw['votacao']
