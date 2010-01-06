@@ -24,6 +24,11 @@ class HomeController(Controller):
 
     @post("/vote")
     def vote(self, context, nota_evolucao, nota_harmonia, nota_ms_pb):
+        task = Task(url="/resolvevote", params={'nota_evolucao': nota_evolucao, "nota_harmonia": nota_harmonia, "nota_ms_pb": nota_ms_pb})
+        task.add(queue_name='carnaval')
+
+    @post("/resolvevote")
+    def resolve_vote(self, context, nota_evolucao, nota_harmonia, nota_ms_pb):
         votacao_db = db.GqlQuery("SELECT * FROM Votacao WHERE escola = :1", escola).fetch(1)
         db.run_in_transaction(self.save_vote, votacao=votacao_db, nota_evolucao=nota_evolucao, nota_harmonia=nota_harmonia, nota_ms_pb=nota_ms_pb)
 
