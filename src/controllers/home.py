@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 #-*- coding:utf-8 -*-
 
+import time
 from google.appengine.ext import db
 from google.appengine.api.labs.taskqueue import Task
 import logging
@@ -91,14 +92,25 @@ class HomeController(Controller):
                 nota_harmonia=nota_harmonia, 
                 nota_ms_pb=nota_ms_pb)
 
-#    @get("/zerar")
-#    def zerar(self, context):
-#        self.resultados_lock.acquire()
-#        try:
-#            self.armazena_resultados(Resultados())
-#        finally:
-#            self.resultados_lock.release()
-#        self.redirect("/", context)
+    @get("/zerar")
+    def zerar(self, context):
+        votacao_db =  db.GqlQuery("SELECT * FROM Votacao WHERE escola = :1", escola).fetch(1)
+
+        while db.run_in_transaction(self.executa_zerar, votacao_db):
+            time.sleep(1)
+
+        self.redirect("/", context)
+
+    def executa_zerar(self, votacao_db):
+        if votacao_db:
+            quesitos_db = db.GqlQuery("SELECT * FROM NotaQuesito WHERE ancestor IS :1", votacao_db[0].key()).fetch(500)
+
+            if quesitos_db:
+                db.delete(quesitos_db)
+                return True
+            else:
+                votacao_db[0].delete()
+                return False
 
 #    @get("/linked")
 #    def linked_content(self, context):
