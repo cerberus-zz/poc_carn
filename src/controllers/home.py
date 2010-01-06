@@ -24,32 +24,23 @@ class HomeController(Controller):
 
     @post("/vote")
     def vote(self, context, nota_evolucao, nota_harmonia, nota_ms_pb):
-        task = Task(url="/resolvevote", params={'nota_evolucao': nota_evolucao, "nota_harmonia": nota_harmonia, "nota_ms_pb": nota_ms_pb})
-        task.add(queue_name='carnaval')
-
-    @post("/resolvevote")
-    def resolve_vote(self, context, nota_evolucao, nota_harmonia, nota_ms_pb):
         votacao_db = db.GqlQuery("SELECT * FROM Votacao WHERE escola = :1", escola).fetch(1)
-        quesitos = {}
-        if not votacao_db:
-            votacao = None
-        else:
-            votacao = votacao_db[0]
-            quesito_db = db.GqlQuery("SELECT * FROM NotaQuesito WHERE ancestor IS :1", votacao.key()).fetch(3)
-
-            for quesito in quesito_db:
-                quesitos[quesito.quesito] = quesito
-
-        db.run_in_transaction(self.save_vote, votacao=votacao, quesitos=quesitos, nota_evolucao=nota_evolucao, nota_harmonia=nota_harmonia, nota_ms_pb=nota_ms_pb)
+        db.run_in_transaction(self.save_vote, votacao=votacao_db, nota_evolucao=nota_evolucao, nota_harmonia=nota_harmonia, nota_ms_pb=nota_ms_pb)
 
     def save_vote(self, **kw):
-        votacao = kw['votacao']
-        if not votacao:
+        votacao_db = kw['votacao']
+        if not votacao_db:
             votacao = Votacao(numero_votos=0, escola=escola)
+        else:
+            votacao = votacao_db[0]
         votacao.numero_votos += 1
         votacao.put()
 
-        quesitos = kw['quesitos']
+        quesitos = {}
+        quesito_db = db.GqlQuery("SELECT * FROM NotaQuesito WHERE ancestor IS :1", votacao.key()).fetch(3)
+
+        for quesito in quesito_db:
+            quesitos[quesito.quesito] = quesito
 
         nome_quesitos = ["nota_evolucao", "nota_harmonia", "nota_ms_pb"]
         for nome_quesito in nome_quesitos:
