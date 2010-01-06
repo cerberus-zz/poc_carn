@@ -7,6 +7,10 @@
             $(function(){
                 $.loadIndex($('#voting-box'), function(){
                     $.attachVoting();
+                    $.updateResults($("#voting-result"));
+                });
+                $("#atualizar").click(function(){
+                    $.updateResults($("#voting-result"));
                 });
             });
         </script>
@@ -16,6 +20,7 @@
         <div id="voting-box"></div>
         <div id="voting-result"></div>
         <br /><br />
+        <a href="javascript:" id="atualizar">atualizar</a><br/>
         <a href="/zerar">Zerar os votos</a>
     </body>
 </html>

@@ -24,4 +24,15 @@ jQuery.attachVoting = function() {
 
     });
 };
+jQuery.updateResults = function(el) {
+    var json = $.ajax({
+        url: "/result",
+        dataType:"json",
+        async: false,
+        cache:false,
+        success: function(data){
+            el.html("votos "+data.votos);
+        }
+    }).responseText;
+};
 
