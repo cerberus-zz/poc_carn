@@ -20,6 +20,7 @@ jQuery.attachVoting = function() {
                 cache: false
             }
         ).responseText;
+
         //$.updateResults($('#voting-result'));
     });
 };

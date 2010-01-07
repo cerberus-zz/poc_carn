@@ -38,6 +38,7 @@ class HomeController(Controller):
         for nome_quesito in nome_quesitos:
             quesito = NotaQuesito(parent=votacao, quesito=nome_quesito, nota_total=0)
             quesito.put()
+            memcache.set(nome_quesito, quesito.key())
 
         memcache.set("votacao_key", votacao.key())
 
@@ -66,20 +67,9 @@ class HomeController(Controller):
         if not votacao_key:
             raise RuntimeError("Tem que abrir a votacão primeiro!!!")
 
-        quesitos = {}
-        quesito_db = db.GqlQuery("SELECT * FROM NotaQuesito WHERE ancestor IS :1", votacao_key).fetch(3)
-
-        for quesito in quesito_db:
-            quesitos[quesito.quesito] = quesito
-
         nome_quesitos = ["nota_evolucao", "nota_harmonia", "nota_ms_pb"]
         for nome_quesito in nome_quesitos:
-
-            if not nome_quesito in quesitos:
-                quesito = NotaQuesito(parent=votacao_key, quesito=nome_quesito, nota_total=0)
-            else:
-                quesito = quesitos[nome_quesito]
-
+            quesito = db.get(memcache.get(nome_quesito))
             quesito.nota_total += int(kw[nome_quesito])
             quesito.put()
 
