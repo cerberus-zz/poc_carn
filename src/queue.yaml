@@ -1,5 +1,5 @@
 queue:
 - name: carnaval
-  rate: 20/s
-  bucket_size: 20
+  rate: 5/s
+  bucket_size: 5
 

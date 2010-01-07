@@ -1,4 +1,4 @@
-# Makefile for ideorum
+# Makefile for poc_carn
 SHELL := /bin/bash
 
 # Internal variables.
@@ -49,5 +49,5 @@ rundb:
 	${app_server} --clear_datastore src/
 
 upload:
-	${app_cfg} update src/
+	${app_cfg} --no_cookies update src/
 

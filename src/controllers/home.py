@@ -3,12 +3,14 @@
 
 import time
 from google.appengine.ext import db
+from google.appengine.api import memcache
 from google.appengine.api.labs.taskqueue import Task
 import logging
 from base import Controller, get, post, json, authenticated
 from models import *
 
 escola = "Mocidade"
+retries = 2
 
 class HomeController(Controller):
     def __init__(self, settings=None):
@@ -22,31 +24,50 @@ class HomeController(Controller):
     def test(self, context):
         self.render_to_response("included.html", context)
 
+    @get("/abrir")
+    def abrir(self, context):
+        votacao_db = db.GqlQuery("SELECT * FROM Votacao WHERE escola = :1", escola).fetch(1)
+
+        while db.run_in_transaction(self.executa_zerar, votacao_db):
+            time.sleep(1)
+
+        votacao = Votacao(numero_votos=0, escola=escola)
+        votacao.put()
+
+        nome_quesitos = ["nota_evolucao", "nota_harmonia", "nota_ms_pb"]
+        for nome_quesito in nome_quesitos:
+            quesito = NotaQuesito(parent=votacao, quesito=nome_quesito, nota_total=0)
+            quesito.put()
+
+        memcache.set("votacao_key", votacao.key())
+
+        self.redirect("/", context)
+
     @post("/vote")
     def vote(self, context, nota_evolucao, nota_harmonia, nota_ms_pb):
+        self.adiciona_na_fila(nota_evolucao, nota_harmonia, nota_ms_pb)
+
+    def adiciona_na_fila(self, nota_evolucao, nota_harmonia, nota_ms_pb):
         task = Task(url="/resolvevote", params={'nota_evolucao': nota_evolucao, "nota_harmonia": nota_harmonia, "nota_ms_pb": nota_ms_pb})
         task.add(queue_name='carnaval')
 
     @post("/resolvevote")
     def resolve_vote(self, context, nota_evolucao, nota_harmonia, nota_ms_pb):
-        votacao_db = db.GqlQuery("SELECT * FROM Votacao WHERE escola = :1", escola).fetch(1)
         try:
-            db.run_in_transaction(self.save_vote, votacao=votacao_db, nota_evolucao=nota_evolucao, nota_harmonia=nota_harmonia, nota_ms_pb=nota_ms_pb)
+           db.run_in_transaction_custom_retries(retries, self.save_vote, nota_evolucao=nota_evolucao, nota_harmonia=nota_harmonia, nota_ms_pb=nota_ms_pb)
         except db.TransactionFailedError:
-            task = Task(url="/resolvevote", params={'nota_evolucao': nota_evolucao, "nota_harmonia": nota_harmonia, "nota_ms_pb": nota_ms_pb})
-            task.add(queue_name='carnaval')
+            self.adiciona_na_fila(nota_evolucao, nota_harmonia, nota_ms_pb)
+        except db.Timeout:
+            self.adiciona_na_fila(nota_evolucao, nota_harmonia, nota_ms_pb)
 
     def save_vote(self, **kw):
-        votacao_db = kw['votacao']
-        if not votacao_db:
-            votacao = Votacao(numero_votos=0, escola=escola)
-        else:
-            votacao = votacao_db[0]
-        votacao.numero_votos += 1
-        votacao.put()
+        votacao = None
+        votacao_key = memcache.get('votacao_key')
+        if not votacao_key:
+            raise RuntimeError("Tem que abrir a votacão primeiro!!!")
 
         quesitos = {}
-        quesito_db = db.GqlQuery("SELECT * FROM NotaQuesito WHERE ancestor IS :1", votacao.key()).fetch(3)
+        quesito_db = db.GqlQuery("SELECT * FROM NotaQuesito WHERE ancestor IS :1", votacao_key).fetch(3)
 
         for quesito in quesito_db:
             quesitos[quesito.quesito] = quesito
@@ -55,12 +76,17 @@ class HomeController(Controller):
         for nome_quesito in nome_quesitos:
 
             if not nome_quesito in quesitos:
-                quesito = NotaQuesito(parent=votacao, quesito=nome_quesito, nota_total=0)
+                quesito = NotaQuesito(parent=votacao_key, quesito=nome_quesito, nota_total=0)
             else:
                 quesito = quesitos[nome_quesito]
 
             quesito.nota_total += int(kw[nome_quesito])
             quesito.put()
+
+            votacao = quesito.parent()
+
+        votacao.numero_votos += 1
+        votacao.put()
 
     @get("/result")
     @json
