@@ -1,1 +1,7 @@
 skin: default
+#Local
+#public_key: 6LfTXgoAAAAAALuTlkTV1zDnAvKXQeYEASgQ-grm
+#private_key: 6LfTXgoAAAAAADAqPmfKp0quvSSmNip82306cDDt
+#Server
+public_key: 6LfTXgoAAAAAALuTlkTV1zDnAvKXQeYEASgQ-grm
+private_key: 6LfTXgoAAAAAADAqPmfKp0quvSSmNip82306cDDt

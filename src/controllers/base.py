@@ -28,6 +28,17 @@ def json(func):
 
     return actual
 
+def javascript(func):
+    def actual(*args, **kw):
+        if not args or len(args) < 2:
+            raise RuntimeError("The decorated function must be inside a controller!")
+
+        instance = args[1]
+        instance.response.headers['Content-Type'] = "text/javascript"
+        func(*args, **kw)
+
+    return actual
+
 def authenticated(func):
     def actual(*args, **kw):
         if not args or len(args) < 2:

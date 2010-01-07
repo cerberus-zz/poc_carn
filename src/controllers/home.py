@@ -6,8 +6,9 @@ from google.appengine.ext import db
 from google.appengine.api import memcache
 from google.appengine.api.labs.taskqueue import Task
 import logging
-from base import Controller, get, post, json, authenticated
+from base import Controller, get, post, json, authenticated, javascript
 from models import *
+from recaptcha import submit
 
 escola = "Mocidade"
 retries = 2
@@ -15,6 +16,19 @@ retries = 2
 class HomeController(Controller):
     def __init__(self, settings=None):
         super(HomeController, self).__init__(settings)
+
+    @property
+    def public_key(self):
+        return self.settings.get('public_key')
+
+    @property
+    def private_key(self):
+        return self.settings.get('private_key')
+
+    @get("/loadscript.js")
+    @javascript
+    def load_script(self, context):
+        self.render_to_response("load_index.js", context, public_key=self.public_key)
 
     @get("/include")
     def index(self, context):
@@ -45,8 +59,21 @@ class HomeController(Controller):
         self.redirect("/", context)
 
     @post("/vote")
-    def vote(self, context, nota_evolucao, nota_harmonia, nota_ms_pb):
-        self.adiciona_na_fila(nota_evolucao, nota_harmonia, nota_ms_pb)
+    def vote(self, context, nota_evolucao, nota_harmonia, nota_ms_pb, recaptcha_challenge_field, recaptcha_response_field):
+        remoteip = context.request.remote_addr
+        logging.error("ip: %s" % remoteip)
+
+        result = submit(recaptcha_challenge_field,
+                        recaptcha_response_field,
+                        self.private_key,
+                        remoteip)
+
+        if not result.is_valid:
+            self.write_to_response('ERROR', context)
+            logging.error('result.error_code: %s' % result.error_code)
+        else:
+            self.adiciona_na_fila(nota_evolucao, nota_harmonia, nota_ms_pb)
+            self.write_to_response("OK", context)
 
     def adiciona_na_fila(self, nota_evolucao, nota_harmonia, nota_ms_pb):
         task = Task(url="/resolvevote", params={'nota_evolucao': nota_evolucao, "nota_harmonia": nota_harmonia, "nota_ms_pb": nota_ms_pb})

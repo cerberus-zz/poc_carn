@@ -10,6 +10,9 @@ jQuery.attachVoting = function() {
             quesitos += "&"
         });
 
+        quesitos += "recaptcha_challenge_field=" + $('#recaptcha_challenge_field').val() + "&";
+        quesitos += "recaptcha_response_field=" + $('#recaptcha_response_field').val();
+
         bodyContent = $.ajax({
                 url: "vote",
                 global: false,
@@ -20,6 +23,10 @@ jQuery.attachVoting = function() {
                 cache: false
             }
         ).responseText;
+        
+        if (bodyContent != 'OK'){
+            alert('PREENCHE DIREITO');
+        }
 
         //$.updateResults($('#voting-result'));
     });
