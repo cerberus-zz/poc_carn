@@ -27,6 +27,7 @@ jQuery.attachVoting = function() {
         if (bodyContent != 'OK'){
             alert('PREENCHE DIREITO');
         }
+        Recaptcha.reload();
 
         //$.updateResults($('#voting-result'));
     });
